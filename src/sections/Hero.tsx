@@ -7,11 +7,6 @@ const ease = [0.76, 0, 0.24, 1] as const;
 
 /* ─── Geometry helper ───────────────────────────────────────── */
 
-/**
- * Returns the point where a ray from (cx,cy) toward (tx,ty)
- * exits a rectangle centered at (cx,cy) with half-extents (hw, hh).
- * Lines will start from the lamp boundary, never passing through the image.
- */
 function getRectEdge(
   cx: number,
   cy: number,
@@ -71,10 +66,16 @@ type Coords = {
   lampCY: number;
   lampHalfW: number;
   lampHalfH: number;
+  // Desktop endpoints
   descY: number;
   descRight: number;
   titleY: number;
   titleLeft: number;
+  // Mobile L-shape endpoints
+  descLeft: number;
+  descBottom: number;
+  titleRight: number;
+  titleTop: number;
 };
 
 /* ─── Hero ──────────────────────────────────────────────────── */
@@ -104,14 +105,20 @@ export default function Hero() {
       const Ti = titleRef.current.getBoundingClientRect();
 
       setCoords({
-        lampCX: L.left - S.left + L.width / 2,
-        lampCY: L.top - S.top + L.height / 2,
-        lampHalfW: L.width / 2,
+        lampCX:    L.left - S.left + L.width  / 2,
+        lampCY:    L.top  - S.top  + L.height / 2,
+        lampHalfW: L.width  / 2,
         lampHalfH: L.height / 2,
-        descY: D.top - S.top + D.height / 2,
+        // Desktop
+        descY:     D.top  - S.top  + D.height / 2,
         descRight: D.right - S.left,
-        titleY: Ti.top - S.top + Ti.height / 2,
+        titleY:    Ti.top  - S.top  + Ti.height / 2,
         titleLeft: Ti.left - S.left,
+        // Mobile
+        descLeft:   D.left   - S.left,
+        descBottom: D.bottom - S.top,
+        titleRight: Ti.right  - S.left,
+        titleTop:   Ti.top    - S.top,
       });
     };
 
@@ -132,34 +139,24 @@ export default function Hero() {
     >
       <LampProjection />
 
-      {/* ── Connecting lines ─────────────────────────────────── */}
+      {/* ── Desktop connecting lines (diagonal elbow) ────────── */}
       {coords &&
         (() => {
-          // Start each line from the lamp's rectangular boundary, not its interior
           const [descSX, descSY] = getRectEdge(
-            coords.lampCX,
-            coords.lampCY,
-            coords.lampHalfW,
-            coords.lampHalfH,
-            coords.descRight,
-            coords.descY,
+            coords.lampCX, coords.lampCY,
+            coords.lampHalfW, coords.lampHalfH,
+            coords.descRight, coords.descY,
           );
           const [titleSX, titleSY] = getRectEdge(
-            coords.lampCX,
-            coords.lampCY,
-            coords.lampHalfW,
-            coords.lampHalfH,
-            coords.titleLeft,
-            coords.titleY,
+            coords.lampCX, coords.lampCY,
+            coords.lampHalfW, coords.lampHalfH,
+            coords.titleLeft, coords.titleY,
           );
 
-          // Elbow: 72% from lamp center toward target — then horizontal cap to edge
-          const descElbowX =
-            coords.lampCX + (coords.descRight - coords.lampCX) * 0.72;
-          const titleElbowX =
-            coords.lampCX + (coords.titleLeft - coords.lampCX) * 0.72;
+          const descElbowX  = coords.lampCX + (coords.descRight  - coords.lampCX) * 0.72;
+          const titleElbowX = coords.lampCX + (coords.titleLeft  - coords.lampCX) * 0.72;
 
-          const descPath = `M ${descSX}  ${descSY}  L ${descElbowX}  ${coords.descY}  L ${coords.descRight} ${coords.descY}`;
+          const descPath  = `M ${descSX}  ${descSY}  L ${descElbowX}  ${coords.descY}  L ${coords.descRight} ${coords.descY}`;
           const titlePath = `M ${titleSX} ${titleSY} L ${titleElbowX} ${coords.titleY} L ${coords.titleLeft} ${coords.titleY}`;
 
           return (
@@ -170,31 +167,80 @@ export default function Hero() {
             >
               <motion.path
                 d={descPath}
-                stroke="#7A9B8C"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                fill="none"
+                stroke="#7A9B8C" strokeWidth={1.5} strokeLinecap="round" fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 0.55 }}
                 transition={{ duration: 1.1, ease }}
               />
               <motion.path
                 d={titlePath}
-                stroke="#7A9B8C"
-                strokeWidth={1.5}
-                strokeLinecap="round"
+                stroke="#7A9B8C" strokeWidth={1.5} strokeLinecap="round" fill="none"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.55 }}
+                transition={{ delay: 0.18, duration: 1.1, ease }}
+              />
+              <EndDot cx={descSX}           cy={descSY}           delay={0}   />
+              <EndDot cx={titleSX}          cy={titleSY}          delay={0.1} />
+              <EndDot cx={coords.descRight} cy={coords.descY}     delay={1.1} />
+              <EndDot cx={coords.titleLeft} cy={coords.titleY}    delay={1.3} />
+            </svg>
+          );
+        })()}
+
+      {/* ── Mobile connecting lines (horizontal → vertical L-shape) */}
+      {coords &&
+        (() => {
+          const lampLeft  = coords.lampCX - coords.lampHalfW;
+          const lampRight = coords.lampCX + coords.lampHalfW;
+          // Stop 14 px clear of the text element boundaries
+          const GAP = 14;
+          const descEndY  = coords.descBottom + GAP;   // stop just below desc text
+          const titleEndY = coords.titleTop   - GAP;   // stop just above title text
+
+          // Description: exit lamp left → go left → turn up toward desc text
+          const descPathMobile =
+            `M ${lampLeft} ${coords.lampCY} ` +
+            `L ${coords.descLeft} ${coords.lampCY} ` +
+            `L ${coords.descLeft} ${descEndY}`;
+
+          // Title: exit lamp right → go right → turn down toward title text
+          const titlePathMobile =
+            `M ${lampRight} ${coords.lampCY} ` +
+            `L ${coords.titleRight} ${coords.lampCY} ` +
+            `L ${coords.titleRight} ${titleEndY}`;
+
+          return (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none md:hidden"
+              style={{ zIndex: 9 }}
+              aria-hidden
+            >
+              {/* Description L — draws: left then up */}
+              <motion.path
+                d={descPathMobile}
+                stroke="#7A9B8C" strokeWidth={1.5}
+                strokeLinecap="round" strokeLinejoin="round"
+                fill="none"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.55 }}
+                transition={{ duration: 1.1, ease }}
+              />
+              {/* Title L — draws: right then down */}
+              <motion.path
+                d={titlePathMobile}
+                stroke="#7A9B8C" strokeWidth={1.5}
+                strokeLinecap="round" strokeLinejoin="round"
                 fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 0.55 }}
                 transition={{ delay: 0.18, duration: 1.1, ease }}
               />
-
-              {/* Dots at lamp boundary (start of each line) */}
-              <EndDot cx={descSX} cy={descSY} delay={0} />
-              <EndDot cx={titleSX} cy={titleSY} delay={0.1} />
-              {/* Dots at target container edges */}
-              <EndDot cx={coords.descRight} cy={coords.descY} delay={1.1} />
-              <EndDot cx={coords.titleLeft} cy={coords.titleY} delay={1.3} />
+              {/* Dots at lamp edges (line start) */}
+              <EndDot cx={lampLeft}          cy={coords.lampCY} delay={0}   />
+              <EndDot cx={lampRight}         cy={coords.lampCY} delay={0.1} />
+              {/* Dots near text (line end, with gap) */}
+              <EndDot cx={coords.descLeft}   cy={descEndY}      delay={1.1} />
+              <EndDot cx={coords.titleRight} cy={titleEndY}     delay={1.3} />
             </svg>
           );
         })()}

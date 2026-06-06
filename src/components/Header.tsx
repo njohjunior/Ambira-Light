@@ -269,6 +269,16 @@ export default function Header() {
                   </motion.a>
                 );
               })}
+              <motion.a
+                href="#collection"
+                className="inline-flex items-center justify-center self-start gap-2 font-body font-medium tracking-[0.04em] leading-none px-5 pt-2.5 pb-1.5 text-sm rounded-sm bg-primary text-white hover:opacity-85 active:scale-[0.98] transition-all duration-200 select-none"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: NAV_LINKS.length * 0.06, duration: 0.3 }}
+                onClick={() => setOpen(false)}
+              >
+                Shop Now
+              </motion.a>
             </nav>
           </motion.div>
         )}
