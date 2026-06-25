@@ -6,6 +6,7 @@ import Hero from '../sections/Hero'
 import About from '../sections/About'
 import Collections from '../sections/Collections'
 import Contact from '../sections/Contact'
+import { Analytics } from "@vercel/analytics/next"
 
 function App() {
   const [loaded, setLoaded] = useState(false)
@@ -28,6 +29,7 @@ function App() {
           </main>
         </>
       )}
+      <Analytics />
     </ThemeProvider>
   )
 }
