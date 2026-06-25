@@ -6,7 +6,7 @@ import Hero from '../sections/Hero'
 import About from '../sections/About'
 import Collections from '../sections/Collections'
 import Contact from '../sections/Contact'
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 function App() {
   const [loaded, setLoaded] = useState(false)
